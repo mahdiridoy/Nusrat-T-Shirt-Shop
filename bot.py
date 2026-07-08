@@ -110,7 +110,8 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         await update.effective_message.reply_text(
-            f"✅ Ad counted! {new_count}/{config.DAILY_LIMIT}",
+            f"✅ Ad counted! {new_count}/{config.DAILY_LIMIT}\n"
+            f"Tap 🎬 Watch Ad below to go again.",
             reply_markup=watch_ad_keyboard(),
         )
 
