@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watch Ad</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!--
+  Monetag SDK tag. Replace YOUR_ZONE_ID with your real Zone ID from the
+  Monetag dashboard (Rewarded Interstitial zone). Monetag auto-generates a
+  matching function name "show_<ZoneID>" — update BOTH the data-sdk
+  attribute below AND the function call further down to match it exactly.
+-->
+<script src='//libtl.com/sdk.js' data-zone='YOUR_ZONE_ID' data-sdk='show_YOUR_ZONE_ID'></script>
+
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #111111);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  #status { font-size: 16px; margin-top: 16px; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 4px solid #ccc;
+    border-top-color: #2196F3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="spinner" id="spinner"></div>
+  <div id="status">Loading ad...</div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const statusEl = document.getElementById("status");
+    const spinnerEl = document.getElementById("spinner");
+
+    function finishWithError(msg) {
+      spinnerEl.style.display = "none";
+      statusEl.textContent = msg;
+      setTimeout(() => tg.close(), 2500);
+    }
+
+    function finishWithReward() {
+      spinnerEl.style.display = "none";
+      statusEl.textContent = "✅ Ad watched! Sending reward...";
+      tg.sendData(JSON.stringify({ status: "watched", ts: Date.now() }));
+      setTimeout(() => tg.close(), 400);
+    }
+
+    // Trigger the Monetag Rewarded Interstitial. The promise only resolves
+    // once the user has actually watched/completed the ad.
+    if (typeof show_YOUR_ZONE_ID === "function") {
+      show_YOUR_ZONE_ID()
+        .then(() => finishWithReward())
+        .catch(() => finishWithError("⚠️ No ad available right now. Try again later."));
+    } else {
+      finishWithError("⚠️ Ad script failed to load. Check your connection and try again.");
+    }
+  </script>
+</body>
+</html>
