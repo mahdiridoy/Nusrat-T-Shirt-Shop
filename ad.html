@@ -55,14 +55,17 @@
     function finishWithError(msg) {
       spinnerEl.style.display = "none";
       statusEl.textContent = msg;
-      setTimeout(() => tg.close(), 2500);
+      setTimeout(() => tg.close(), 1800);
     }
 
     function finishWithReward() {
       spinnerEl.style.display = "none";
       statusEl.textContent = "✅ Ad watched! Sending reward...";
       tg.sendData(JSON.stringify({ status: "watched", ts: Date.now() }));
-      setTimeout(() => tg.close(), 400);
+      // sendData() itself already closes the Web App on most clients, but
+      // we force a close shortly after as a fallback so the user is never
+      // left staring at this screen.
+      setTimeout(() => tg.close(), 250);
     }
 
     // Trigger the Monetag Rewarded Interstitial. The promise only resolves
