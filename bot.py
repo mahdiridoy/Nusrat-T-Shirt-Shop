@@ -8,14 +8,13 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytz
 from telegram import (
     Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
     WebAppInfo,
 )
 from telegram.ext import (
     Application,
     CommandHandler,
-    CallbackQueryHandler,
     MessageHandler,
     ContextTypes,
     filters,
@@ -39,12 +38,18 @@ def today_str() -> str:
     return datetime.now(TZ).strftime("%Y-%m-%d")
 
 
-def watch_ad_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+def watch_ad_keyboard() -> ReplyKeyboardMarkup:
+    # IMPORTANT: tg.sendData() (used by ad.html to report a completed view)
+    # only works for Web Apps launched from a *keyboard* button. Web Apps
+    # launched from an *inline* button never trigger the bot's
+    # web_app_data update, so counts silently never increment. Hence
+    # ReplyKeyboardMarkup + KeyboardButton here instead of an inline one.
+    return ReplyKeyboardMarkup(
         [
-            [InlineKeyboardButton("🎬 Watch Ad", web_app=WebAppInfo(url=config.WEBAPP_URL))],
-            [InlineKeyboardButton("📊 My Stats", callback_data="stats")],
-        ]
+            [KeyboardButton("🎬 Watch Ad", web_app=WebAppInfo(url=config.WEBAPP_URL))],
+            [KeyboardButton("📊 My Stats")],
+        ],
+        resize_keyboard=True,
     )
 
 
@@ -70,14 +75,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     count = db.get_count(user_id, today_str())
     await update.message.reply_text(status_text(count))
-
-
-async def stats_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = query.from_user.id
-    count = db.get_count(user_id, today_str())
-    await query.message.reply_text(status_text(count))
 
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -153,7 +150,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CallbackQueryHandler(stats_callback, pattern="^stats$"))
+    app.add_handler(MessageHandler(filters.Regex("^📊 My Stats$"), stats))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
 
     logger.info("Bot starting (polling)...")
