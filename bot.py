@@ -1,6 +1,9 @@
 import json
 import logging
+import os
+import threading
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytz
 from telegram import (
@@ -115,8 +118,31 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, format, *args):
+        pass  # silence request logging
+
+
+def _start_health_server():
+    port = int(os.getenv("PORT", "10000"))
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    logger.info(f"Health check server listening on port {port}")
+    server.serve_forever()
+
+
 def main():
     db.init_db()
+
+    # Render (free Web Service) requires an open port or it kills the
+    # service. This thread satisfies that check; it does nothing else.
+    threading.Thread(target=_start_health_server, daemon=True).start()
+
     app = Application.builder().token(config.BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
